@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vision Craft</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- histograms [file:33] -->
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0f172a;
+            color: #e5e7eb;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            text-align: center;
+            padding: 30px 10px 10px;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 32px;
+            letter-spacing: 2px;
+        }
+        header p {
+            max-width: 800px;
+            margin: 10px auto 0;
+            color: #9ca3af;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 20px auto 40px;
+            background: #111827;
+            border-radius: 8px;
+            padding: 20px 24px 30px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        }
+        form {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 16px 24px;
+            align-items: center;
+        }
+        label {
+            font-size: 14px;
+            color: #d1d5db;
+        }
+        input[type="file"],
+        select,
+        input[type="number"],
+        button {
+            padding: 6px 8px;
+            margin-top: 4px;
+            border-radius: 4px;
+            border: 1px solid #374151;
+            background: #020617;
+            color: #e5e7eb;
+            font-size: 13px;
+        }
+        button {
+            background: #2563eb;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #1d4ed8;
+        }
+        .full-row {
+            grid-column: 1 / -1;
+        }
+        .params { display: none; }
+
+        .results-wrapper {
+            margin-top: 30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .image-panel {
+            background: #020617;
+            border-radius: 6px;
+            padding: 10px;
+        }
+        .image-panel h3 {
+            margin-top: 0;
+            font-size: 15px;
+        }
+        .image-panel img {
+            max-width: 100%;
+            max-height: 380px;
+            display: block;
+            border-radius: 4px;
+            border: 1px solid #111827;
+        }
+        .actions {
+            margin-top: 10px;
+            text-align: right;
+        }
+        .hist-wrapper {
+            margin-top: 24px;
+            background: #020617;
+            border-radius: 6px;
+            padding: 10px;
+            display: none;
+        }
+        .hist-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .error {
+            color: #f97316;
+            margin-top: 10px;
+        }
+        @media (max-width: 900px) {
+            form, .results-wrapper, .hist-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Vision Craft</h1>
+    <p>
+        Vision Craft is a web-based image processing lab built with Flask and Python.
+        It showcases course operations like noise, filters, gamma, grayscale, histogram equalization, and fusion.[file:33]
+    </p>
+</header>
+
+<div class="container">
+    <form id="process-form">
+        <div>
+            <label>Main image:</label><br>
+            <input type="file" name="image" id="image-input" accept="image/*" title="Select main image" required>
+        </div>
+
+        <div>
+            <label>Operation:</label><br>
+            <select name="operation" id="operation-select" title="Select operation">
+                <option value="gaussian">Gaussian noise</option>
+                <option value="saltpepper">Salt &amp; pepper noise</option>
+                <option value="median">Median filter</option>
+                <option value="average">Average filter</option>
+                <option value="gamma">Gamma correction</option>
+                <option value="grayscale">Grayscale</option>
+                <option value="histeq">Histogram equalization</option>
+                <option value="fusion_simple">Simple average fusion</option>
+                <option value="fusion_weighted">Weighted fusion (alpha)</option>
+            </select>
+        </div>
+
+        <!-- Gaussian params -->
+        <div id="gaussian-params" class="params">
+            <label>Mean:</label><br>
+            <input type="number" name="gauss_mean" step="0.01" value="0.0">
+        </div>
+        <div id="gaussian-params-2" class="params">
+            <label>Sigma:</label><br>
+            <input type="number" name="gauss_sigma" step="0.01" value="0.05">
+        </div>
+
+        <!-- Salt & pepper -->
+        <div id="sp-params" class="params">
+            <label>Amount:</label><br>
+            <input type="number" name="sp_amount" step="0.01" value="0.02">
+        </div>
+        <div id="sp-params-2" class="params">
+            <label>Salt vs pepper (0–1):</label><br>
+            <input type="number" name="sp_ratio" step="0.1" value="0.5" min="0" max="1">
+        </div>
+
+        <!-- Median -->
+        <div id="median-params" class="params">
+            <label>Kernel size:</label><br>
+            <input type="number" name="median_size" value="3" min="1">
+        </div>
+
+        <!-- Average -->
+        <div id="avg-params" class="params">
+            <label>Kernel size:</label><br>
+            <input type="number" name="avg_size" value="3" min="1">
+        </div>
+
+        <!-- Gamma -->
+        <div id="gamma-params" class="params">
+            <label>Gamma:</label><br>
+            <input type="number" name="gamma" step="0.1" value="1.0">
+        </div>
+
+        <!-- Fusion -->
+        <div id="fusion-params" class="params full-row">
+            <label>Second image (same size):</label><br>
+            <input type="file" name="image2" id="image2-input" accept="image/*">
+        </div>
+        <div id="fusion-weighted-params" class="params">
+            <label>Alpha (0–1):</label><br>
+            <input type="number" name="alpha" step="0.1" value="0.5" min="0" max="1">
+        </div>
+
+        <div class="full-row actions">
+            <button type="submit">Process</button>
+            <button type="button" id="save-btn" disabled>Save image</button>
+        </div>
+    </form>
+
+    <div id="error-msg" class="error"></div>
+
+    <div class="results-wrapper">
+        <div class="image-panel">
+            <h3>Original image</h3>
+            <img id="orig-img" src="" alt="Original will appear here">
+        </div>
+        <div class="image-panel">
+            <h3>Processed image</h3>
+            <img id="proc-img" src="" alt="Processed will appear here">
+        </div>
+    </div>
+
+    <div id="hist-section" class="hist-wrapper">
+        <h3>Histograms (grayscale)</h3>
+        <div class="hist-grid">
+            <canvas id="orig-hist"></canvas>
+            <canvas id="enh-hist"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    const opSelect = document.getElementById('operation-select');
+    const paramsDivs = document.querySelectorAll('.params');
+    const form = document.getElementById('process-form');
+    const origImg = document.getElementById('orig-img');
+    const procImg = document.getElementById('proc-img');
+    const saveBtn = document.getElementById('save-btn');
+    const errorMsg = document.getElementById('error-msg');
+    const histSection = document.getElementById('hist-section');
+    let lastProcessedDataUrl = null;
+    let origHistChart = null;
+    let enhHistChart = null;
+
+    function hideAllParams() {
+        paramsDivs.forEach(d => d.style.display = 'none');
+    }
+
+    function updateParams() {
+        hideAllParams();
+        const op = opSelect.value;
+        if (op === 'gaussian') {
+            document.getElementById('gaussian-params').style.display = 'block';
+            document.getElementById('gaussian-params-2').style.display = 'block';
+        } else if (op === 'saltpepper') {
+            document.getElementById('sp-params').style.display = 'block';
+            document.getElementById('sp-params-2').style.display = 'block';
+        } else if (op === 'median') {
+            document.getElementById('median-params').style.display = 'block';
+        } else if (op === 'average') {
+            document.getElementById('avg-params').style.display = 'block';
+        } else if (op === 'gamma') {
+            document.getElementById('gamma-params').style.display = 'block';
+        } else if (op === 'fusion_simple') {
+            document.getElementById('fusion-params').style.display = 'block';
+        } else if (op === 'fusion_weighted') {
+            document.getElementById('fusion-params').style.display = 'block';
+            document.getElementById('fusion-weighted-params').style.display = 'block';
+        }
+    }
+    opSelect.addEventListener('change', updateParams);
+    updateParams();
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        errorMsg.textContent = '';
+        histSection.style.display = 'none';
+
+        const formData = new FormData(form);
+        try {
+            const resp = await fetch('/process', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await resp.json();
+            if (!resp.ok) {
+                errorMsg.textContent = data.error || 'Processing error';
+                return;
+            }
+            const origUrl = 'data:image/png;base64,' + data.original;
+            const procUrl = 'data:image/png;base64,' + data.processed;
+            origImg.src = origUrl;
+            procImg.src = procUrl;
+            lastProcessedDataUrl = procUrl;
+            saveBtn.disabled = false;
+
+            if (opSelect.value === 'histeq' && data.orig_hist) {
+                drawHistograms(data);
+            }
+        } catch (err) {
+            errorMsg.textContent = 'Request failed: ' + err;
+        }
+    });
+
+    function drawHistograms(data) {
+        histSection.style.display = 'block';
+
+        const labels = data.orig_bins.slice(0, -1);
+        const ctx1 = document.getElementById('orig-hist').getContext('2d');
+        const ctx2 = document.getElementById('enh-hist').getContext('2d');
+
+        if (origHistChart) origHistChart.destroy();
+        if (enhHistChart) enhHistChart.destroy();
+
+        origHistChart = new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Original',
+                    data: data.orig_hist,
+                    backgroundColor: '#3b82f6'
+                }]
+            },
+            options: { scales: { x: { display: false } } }
+        });
+
+        enhHistChart = new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Equalized',
+                    data: data.enh_hist,
+                    backgroundColor: '#22c55e'
+                }]
+            },
+            options: { scales: { x: { display: false } } }
+        });
+    }
+
+    saveBtn.addEventListener('click', () => {
+        if (!lastProcessedDataUrl) return;
+        const link = document.createElement('a');
+        link.href = lastProcessedDataUrl;
+        link.download = 'visioncraft_result.png';
+        link.click();
+    });
+</script>
+</body>
+</html>
